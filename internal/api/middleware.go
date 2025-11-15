@@ -1,36 +1,32 @@
 package api
 
 import (
-	"log"
-	"net/http"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/jorgediasdsg/pdf-expert/internal/log"
 )
 
-func Middleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func GinMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
 		reqID := uuid.New().String()
 		start := time.Now()
 
-		// Add request ID to context
-		r = r.WithContext(withRequestID(r.Context(), reqID))
+		c.Set("request_id", reqID)
 
-		// Recover panic
-		defer func() {
-			if rec := recover(); rec != nil {
-				log.Printf("[PANIC] req=%s error=%v", reqID, rec)
-				writeError(w, http.StatusInternalServerError, "internal server error", reqID)
-			}
-		}()
+		log.Logger.Info("request_start",
+			"method", c.Request.Method,
+			"path", c.Request.URL.Path,
+			"req_id", reqID,
+		)
 
-		// Log the request
-		log.Printf("[REQUEST] %s %s req=%s", r.Method, r.URL.Path, reqID)
+		c.Next()
 
-		// Continue
-		next.ServeHTTP(w, r)
-
-		// Log duration
-		log.Printf("[DONE] req=%s duration=%s", reqID, time.Since(start))
-	})
+		log.Logger.Info("request_end",
+			"status", c.Writer.Status(),
+			"duration_ms", time.Since(start).Milliseconds(),
+			"req_id", reqID,
+		)
+	}
 }

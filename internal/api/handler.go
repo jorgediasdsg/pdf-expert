@@ -2,10 +2,10 @@ package api
 
 import (
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 
+	"github.com/gin-gonic/gin"
+	"github.com/jorgediasdsg/pdf-expert/internal/config"
 	"github.com/jorgediasdsg/pdf-expert/internal/pdfanalyzer"
 )
 
@@ -17,46 +17,34 @@ func NewHandler(a *pdfanalyzer.PDFAnalyzer) *Handler {
 	return &Handler{Analyzer: a}
 }
 
-func (h *Handler) AnalyzePDF(w http.ResponseWriter, r *http.Request) {
-	reqID := getRequestID(r.Context())
+func (h *Handler) AnalyzePDF(c *gin.Context) {
+	cfg := config.Load() // for TEMP_FOLDER
 
-	if r.Method != http.MethodPost {
-		writeError(w, http.StatusMethodNotAllowed, "Use POST /analyze", reqID)
-		return
-	}
-
-	file, header, err := r.FormFile("file")
+	file, err := c.FormFile("file")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("Failed to read file: %v", err), reqID)
+		writeError(c, 400, fmt.Sprintf("Failed to read file: %v", err))
 		return
 	}
-	defer file.Close()
 
-	tmpPath := "./tmp_" + header.Filename
-	tmpFile, err := os.Create(tmpPath)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to create temp file: %v", err), reqID)
-		return
-	}
-	defer tmpFile.Close()
+	tmpPath := fmt.Sprintf("%s/%s", cfg.TempFolder, file.Filename)
 
-	if _, err := io.Copy(tmpFile, file); err != nil {
-		writeError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to write temp file: %v", err), reqID)
+	if err := c.SaveUploadedFile(file, tmpPath); err != nil {
+		writeError(c, 500, fmt.Sprintf("Failed to save temp file: %v", err))
 		return
 	}
 
 	result, err := h.Analyzer.AnalyzeFile(tmpPath)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to analyze PDF: %v", err), reqID)
+		writeError(c, 500, fmt.Sprintf("Failed to analyze PDF: %v", err))
 		_ = os.Remove(tmpPath)
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]any{
-		"file":       header.Filename,
+	writeSuccess(c, gin.H{
+		"file":       file.Filename,
 		"word_count": result.WordCount,
 		"status":     "completed",
-	}, reqID)
+	})
 
 	_ = os.Remove(tmpPath)
 }

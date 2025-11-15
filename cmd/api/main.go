@@ -2,22 +2,23 @@ package main
 
 import (
 	"fmt"
-	"log"
-	"net/http"
 
-	httpapi "github.com/jorgediasdsg/pdf-expert/internal/api"
+	"github.com/jorgediasdsg/pdf-expert/internal/api"
+	"github.com/jorgediasdsg/pdf-expert/internal/config"
+	"github.com/jorgediasdsg/pdf-expert/internal/log"
 	"github.com/jorgediasdsg/pdf-expert/internal/pdfanalyzer"
 )
 
 func main() {
+	cfg := config.Load()
+
+	log.Init(cfg.Env)
+
 	analyzer := pdfanalyzer.NewPDFAnalyzer()
-	handler := httpapi.NewHandler(analyzer)
+	router := api.NewRouter(analyzer)
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("/analyze", handler.AnalyzePDF)
+	addr := fmt.Sprintf(":%s", cfg.HTTPPort)
+	log.Logger.Info("server_started", "addr", addr)
 
-	wrapped := httpapi.Middleware(mux)
-
-	fmt.Println("Server running on port 8080...")
-	log.Fatal(http.ListenAndServe(":8080", wrapped))
+	router.Run(addr)
 }

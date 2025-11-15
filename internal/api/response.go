@@ -1,38 +1,21 @@
 package api
 
-import (
-	"encoding/json"
-	"net/http"
-)
+import "github.com/gin-gonic/gin"
 
-type successResponse struct {
-	Success   bool        `json:"success"`
-	Data      interface{} `json:"data"`
-	RequestID string      `json:"request_id"`
-}
-
-type errorResponse struct {
-	Success   bool   `json:"success"`
-	Error     string `json:"error"`
-	RequestID string `json:"request_id"`
-}
-
-func writeJSON(w http.ResponseWriter, status int, data interface{}, reqID string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(successResponse{
-		Success:   true,
-		Data:      data,
-		RequestID: reqID,
+func writeSuccess(c *gin.Context, data interface{}) {
+	reqID := c.GetString("request_id")
+	c.JSON(200, gin.H{
+		"success":    true,
+		"data":       data,
+		"request_id": reqID,
 	})
 }
 
-func writeError(w http.ResponseWriter, status int, message string, reqID string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(errorResponse{
-		Success:   false,
-		Error:     message,
-		RequestID: reqID,
+func writeError(c *gin.Context, status int, message string) {
+	reqID := c.GetString("request_id")
+	c.JSON(status, gin.H{
+		"success":    false,
+		"error":      message,
+		"request_id": reqID,
 	})
 }
