@@ -5,20 +5,19 @@ import (
 	"log"
 	"net/http"
 
-	api "github.com/jorgediasdsg/pdf-expert/internal/api"
+	httpapi "github.com/jorgediasdsg/pdf-expert/internal/api"
 	"github.com/jorgediasdsg/pdf-expert/internal/pdfanalyzer"
 )
 
 func main() {
-	// Create the analyzer component
 	analyzer := pdfanalyzer.NewPDFAnalyzer()
+	handler := httpapi.NewHandler(analyzer)
 
-	// Create HTTP handler grouping
-	handler := api.NewHandler(analyzer)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/analyze", handler.AnalyzePDF)
 
-	// Register routes
-	http.HandleFunc("/analyze", handler.AnalyzePDF)
+	wrapped := httpapi.Middleware(mux)
 
 	fmt.Println("Server running on port 8080...")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(":8080", wrapped))
 }
