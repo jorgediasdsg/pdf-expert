@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 
+	"github.com/jorgediasdsg/pdf-expert/internal/adapter/pdf"
 	"github.com/jorgediasdsg/pdf-expert/internal/api"
+	"github.com/jorgediasdsg/pdf-expert/internal/app/usecase"
 	"github.com/jorgediasdsg/pdf-expert/internal/config"
 	"github.com/jorgediasdsg/pdf-expert/internal/log"
 	"github.com/jorgediasdsg/pdf-expert/internal/pdfanalyzer"
@@ -12,10 +14,20 @@ import (
 func main() {
 	cfg := config.Load()
 
+	// Initialize global logger (dev or prod)
 	log.Init(cfg.Env)
 
-	analyzer := pdfanalyzer.NewPDFAnalyzer()
-	router := api.NewRouter(analyzer)
+	// Infra analyzer (old implementation)
+	infraAnalyzer := pdfanalyzer.NewPDFAnalyzer()
+
+	// Adapter wrapping the infra analyzer as a Port implementation
+	analyzerAdapter := pdf.NewPDFAnalyzerAdapter(infraAnalyzer)
+
+	// Use case
+	analyzeUseCase := usecase.NewAnalyzePDFUseCase(analyzerAdapter)
+
+	// Router (Gin) receives ONLY the use case
+	router := api.NewRouter(analyzeUseCase)
 
 	addr := fmt.Sprintf(":%s", cfg.HTTPPort)
 	log.Logger.Info("server_started", "addr", addr)

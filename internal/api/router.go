@@ -2,15 +2,16 @@ package api
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/jorgediasdsg/pdf-expert/internal/pdfanalyzer"
+	"github.com/jorgediasdsg/pdf-expert/internal/app/usecase"
 )
 
-func NewRouter(analyzer *pdfanalyzer.PDFAnalyzer) *gin.Engine {
+// NewRouter wires routes and middleware.
+func NewRouter(uc *usecase.AnalyzePDFUseCase) *gin.Engine {
 	router := gin.New()
 
-	router.Use(GinMiddleware()) // logging + recovery + request id
+	router.Use(GinMiddleware())
 
-	handler := NewHandler(analyzer)
+	handler := NewHandler(uc)
 
 	router.POST("/analyze", handler.AnalyzePDF)
 
