@@ -1,127 +1,151 @@
-# 📄 PDF Analyzer — Fase 1 (versão simples e acoplada)
+# 📄 PDF Analyzer — Phase 2 (from script to structured service)
 
-Este projeto começa com uma implementação **mínima e propositalmente acoplada**, cujo objetivo é:
+This project started in **Phase 1** as a deliberately coupled and naive implementation:
 
-1. **Enviar um PDF**
-2. **Abrir o arquivo**
-3. **Ler o texto**
-4. **Contar o número de palavras**
-5. **Retornar o resultado**
+- a single `main.go`,
+- one `/analyze` endpoint,
+- direct file handling,
+- direct PDF parsing,
+- naive word counting,
+- no layers, no tests, no abstractions.
 
-Nada de rotas elegantes.  
-Nada de camadas.  
-Nada de arquitetura limpa.  
-Nada de boas práticas.
+The goal of Phase 1 was to **validate the PDF extraction approach** using `github.com/ledongthuc/pdf` with the simplest possible code.  
+This validation is documented in `ADR/ADR001.md`.
 
-A intenção nesta fase é **validar a tecnologia de leitura/extração de PDF** e estabelecer uma base mínima de funcionamento, antes de evoluir para uma arquitetura mais robusta.
-
----
-
-## 🚦 Fases do Projeto
-
-### **Fase 1 — Versão acoplada e simples (atual)**
-- Um único arquivo Go (`main.go`)
-- Rota única `/analyze` (POST)
-- Recebe o PDF via upload
-- Extrai texto usando biblioteca PDF
-- Conta palavras
-- Retorna JSON
-- Sem separação de camadas
-- Sem testes
-- Sem estruturação
-- Sem interfaces
-- Sem worker pool
-- Sem repositório
-- Sem padrões
-
-É propositalmente uma versão **feia porém funcional**.
+Now, in **Phase 2**, we begin to move from “just works” to “maintainable”.
 
 ---
 
-### **Fase 2 — Separação mínima de responsabilidades**
-- Criar pacotes simples (pdf, http, service)
-- Melhorar organização
-- Rotas mais claras
-- Código reaproveitável
-- Reduzir acoplamento
-- Começar a introduzir testes
+## 🎯 Phase 2 goals
+
+Phase 2 focuses on **incremental refactoring**, not full clean architecture.
+
+The goals are:
+
+1. **Introduce a basic package structure**  
+   - Move logic out of `main.go`.
+   - Create minimal internal packages (e.g. `internal/pdf`, `internal/http` or similar).
+   - Reduce coupling without over-engineering.
+
+2. **Extract PDF analysis into a dedicated component**  
+   - Separate HTTP concerns from parsing logic.
+   - Make PDF parsing reusable.
+   - Prepare ground for future interfaces and adapters.
+
+3. **Improve HTTP handlers and JSON responses**  
+   - Centralize response formatting.
+   - Use consistent JSON structure for errors and success.
+   - Make the API easier to consume and debug.
+
+4. **Add basic unit tests**  
+   - Start testing core logic (e.g. word counting, simple PDF wrapper).
+   - Build habits for testability in later phases.
+
+We still **do not** introduce worker pools, job queues, storage layers, or advanced patterns in this phase. Those remain future work.
 
 ---
 
-### **Fase 3 — Arquitetura limpa**
-- Domínio separado  
-- Interfaces (ports)  
-- Adapters para HTTP, PDF e Storage  
-- Camada de aplicação (serviços)  
-- Erros estruturados  
-- Configuração por env  
-- Logging melhorado  
+## 🚦 Project phases (high-level roadmap)
+
+### Phase 1 — Naive and coupled (completed)
+
+- Single `main.go`.
+- Direct `pdf.ToText` usage.
+- Temporary file on disk.
+- Naive `countWords` function.
+- No packages, no layers, no tests.
+- Purpose: Validate the PDF extraction library and establish a minimal end-to-end flow.
+
+Details and rationale are in:
+
+- `ADR/ADR001.md` — *Initial simple and coupled architecture to validate PDF extraction*.
 
 ---
 
-### **Fase 4 — Sistema assíncrono com Worker Pool**
-- Fila interna baseada em canais  
-- Workers concorrentes  
-- Retry / backoff  
-- Timeout via context  
-- Storage real (SQLite ou Redis)  
-- Métricas e healthcheck  
-- ADRs completas  
-- Docker / docker-compose  
-- Observabilidade  
+### Phase 2 — Basic structure and separation (current)
+
+- Split logic into small packages.
+- Extract PDF analysis into its own component.
+- Cleaner `main.go` that wires things together.
+- More consistent HTTP responses.
+- Introduce unit tests for core logic.
+
+Documented in:
+
+- `ADR/ADR002.md` — *Introduce basic package structure*  
+- `ADR/ADR003.md` — *Extract PDF analysis into a dedicated component*  
+- `ADR/ADR004.md` — *Improve HTTP handler and JSON response structure*  
+- `ADR/ADR005.md` — *Add unit tests for core logic*
 
 ---
 
-## 🧭 Objetivo final
+### Phase 3 — Toward clean architecture
 
-Construir um sistema que demonstre claramente:
+Planned (not implemented yet):
 
-- evolução técnica,  
-- domínio de refatoração,  
-- compreensão de boas práticas,  
-- capacidade de justificar decisões,  
-- crescimento real de arquitetura.
-
----
-
-## 🛠 Tecnologias
-
-Nesta fase:
-
-- **Go**
-- Biblioteca simples de PDF (ex: `ledongthuc/pdf`)
-- `net/http`
-- Apenas o básico para rodar
+- Domain-layer models.
+- Application services (use cases).
+- Ports and adapters (HTTP, storage, PDF).
+- Configuration via environment variables.
+- Structured logging.
+- More complete test coverage.
 
 ---
 
-## ▶️ Como executar
+### Phase 4 — Asynchronous processing and worker pool
 
-```bash
-go run main.go
+Planned (not implemented yet):
 
-curl -X POST -F "file=@meuarquivo.pdf" http://localhost:8080/analyze
+- In-memory job queue (channels).
+- Worker pool with N goroutines.
+- Retry with backoff and per-job timeouts.
+- Persistence (SQLite or Redis).
+- Health and metrics endpoints.
+- Docker and docker-compose setup.
+- Extended ADR set documenting trade-offs.
+
+---
+
+## 📂 Directory structure (Phase 2 – target)
+
+Planned structure for Phase 2 (still intentionally simple):
+
+```text
+pdf-analyzer/
+  cmd/
+    api/
+      main.go                # Wire HTTP server and handlers
+  internal/
+    httpapi/
+      handler.go             # HTTP handlers and routing
+      response.go            # JSON response helpers
+    pdfanalyzer/
+      analyzer.go            # PDF text extraction and word counting
+  ADR/
+    ADR001.md
+    ADR002.md
+    ADR003.md
+    ADR004.md
+    ADR005.md
+  Makefile
+  README.md
+  DEVELOPMENT.md
+  go.mod
+  go.sum
 ```
 
-## Resposta esperada (simplificada):
+## 🧭 Design principles for this phase
 
-```json
-{
-  "word_count": 1234
-}
-```
+Phase 2 follows these principles:
 
-# 📌 Futuro (resumo de tudo que virá)
+- Change one dimension at a time:
+  - Only introduce structure that solves a real problem seen in Phase 1.
 
-- Worker Pool
-- Fila via channels
-- Camadas limpas
-- Interfaces (ports)
-- Repos adaptáveis
-- Observabilidade real
-- Retry com backoff exponencial
-- Timeout por job
-- Storage (SQLite/Redis)
-- Logs estruturados (slog)
-- Dockerfile + compose
-- ADRs documentando cada escolha
+- Avoid premature abstraction:
+  - No complex interfaces or patterns before they are needed.
+
+- Prepare for Phase 3:
+  - The refactoring here should make it easier, not harder, to later adopt clean/hexagonal architecture.
+  
+- Document decisions explicitly:
+  - Every meaningful structural change is backed by an ADR in ADR/.
