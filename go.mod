@@ -1,4 +1,4 @@
-module github.com/jorgelbg/pdf-expert
+module github.com/jorgediasdsg/pdf-expert
 
 go 1.25.1
 
