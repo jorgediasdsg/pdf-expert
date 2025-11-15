@@ -7,7 +7,7 @@ import (
 	"github.com/ledongthuc/pdf"
 )
 
-// PDFAnalyzer provides methods to analyze PDF files.
+// PDFAnalyzer processes PDF files and extracts text and metadata.
 type PDFAnalyzer struct{}
 
 // Constructor
@@ -15,48 +15,29 @@ func NewPDFAnalyzer() *PDFAnalyzer {
 	return &PDFAnalyzer{}
 }
 
-// Analyze reads the PDF file at the given path and returns its text content and word count.
-func (a *PDFAnalyzer) Analyze(filePath string) (string, int, error) {
+// AnalyzeFile extracts text from the PDF at the given path and returns an AnalysisResult.
+func (a *PDFAnalyzer) AnalyzeFile(filePath string) (AnalysisResult, error) {
 	file, content, err := pdf.Open(filePath)
 	if err != nil {
-		return "", 0, err
+		return AnalysisResult{}, err
 	}
 	defer file.Close()
 
 	var buf bytes.Buffer
 	reader, err := content.GetPlainText()
 	if err != nil {
-		return "", 0, err
-	}
-	if _, err = io.Copy(&buf, reader); err != nil {
-		return "", 0, err
+		return AnalysisResult{}, err
 	}
 
-	contentString := buf.String()
-
-	wordCount := countWords(contentString)
-	return contentString, wordCount, nil
-}
-
-// Simple, naive word counting
-func countWords(text string) int {
-	count := 0
-	inWord := false
-
-	for _, r := range text {
-		if r == ' ' || r == '\n' || r == '\t' {
-			if inWord {
-				count++
-				inWord = false
-			}
-		} else {
-			inWord = true
-		}
+	if _, err := io.Copy(&buf, reader); err != nil {
+		return AnalysisResult{}, err
 	}
 
-	if inWord {
-		count++
-	}
+	text := buf.String()
+	wordCount := countWords(text)
 
-	return count
+	return AnalysisResult{
+		Content:   text,
+		WordCount: wordCount,
+	}, nil
 }

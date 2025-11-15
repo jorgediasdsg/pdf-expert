@@ -14,12 +14,12 @@ type Handler struct {
 	Analyzer *pdfanalyzer.PDFAnalyzer
 }
 
-// Constructor
+// NewHandler creates a new Handler with its dependencies.
 func NewHandler(a *pdfanalyzer.PDFAnalyzer) *Handler {
 	return &Handler{Analyzer: a}
 }
 
-// AnalyzePDF handles the POST /analyze request
+// AnalyzePDF handles POST /analyze
 func (h *Handler) AnalyzePDF(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		writeError(w, http.StatusMethodNotAllowed, "Use POST /analyze")
@@ -34,7 +34,7 @@ func (h *Handler) AnalyzePDF(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	// Write to temp file
+	// Create temp file
 	tmpPath := "./tmp_" + header.Filename
 	tmpFile, err := os.Create(tmpPath)
 	if err != nil {
@@ -43,24 +43,24 @@ func (h *Handler) AnalyzePDF(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tmpFile.Close()
 
-	_, err = io.Copy(tmpFile, file)
-	if err != nil {
+	// Copy uploaded file into temp file
+	if _, err := io.Copy(tmpFile, file); err != nil {
 		writeError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to write temp file: %v", err))
 		return
 	}
 
-	// Run PDF analysis
-	_, wordCount, err := h.Analyzer.Analyze(tmpPath)
+	// Perform analysis
+	result, err := h.Analyzer.AnalyzeFile(tmpPath)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to analyze PDF: %v", err))
 		_ = os.Remove(tmpPath)
 		return
 	}
 
-	// Success response
+	// Return response
 	writeJSON(w, http.StatusOK, map[string]any{
 		"file":       header.Filename,
-		"word_count": wordCount,
+		"word_count": result.WordCount,
 		"status":     "completed",
 	})
 
