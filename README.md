@@ -1,293 +1,195 @@
-# 📄 PDF Expert — From naive script to structured Go service
+# 📄 PDF Expert — Evolution Towards Clean Architecture
 
-`pdf-expert` is a Go service that analyzes PDF files and returns a simple word count.
-The project is intentionally built in phases, evolving from:
+A Go service for analyzing PDF files, progressively evolved from a naive prototype into a modular, testable, and cleanly architected application.
 
-1. a naive, coupled implementation (Phase 1),
-2. to a minimally structured internal design (Phase 2, current),
-3. and then toward a clean architecture style (Phase 3).
+## 📌 Overview
 
-The goal is not only to ship a working service, but to show the evolution from “just works” to “well structured”.
+This project is intentionally built in **phases**, simulating the real evolution of a production system.  
+Each phase improves structure, separation of concerns, testability, and maintainability.
 
 ---
 
-## 🎯 High-level goals
-
-- Validate PDF extraction in Go with real files.
-- Gradually introduce structure (packages, components, models).
-- Prepare the codebase for a clean, testable architecture.
-- Document the reasoning behind each major change using ADRs (Architectural Decision Records).
-
----
-
-## Mermaid
 ```mermaid
 flowchart TD
 
-%% ==========================================
-%% PHASE OVERVIEW
-%% ==========================================
+%% ============================
+%% PHASE 1 — NAIVE MONOLITH
+%% ============================
 
 subgraph P1["Phase 1 — Naive & Coupled"]
-    A1[["main.go"]]
-    A1 --- A2[["/analyze handler mixes:\n- HTTP parsing\n- Temp file write\n- PDF parsing\n- Word count\n- JSON response"]]
+    M1["main.go\n(HTTP + file ops + PDF parsing + JSON response)"]
 end
 
-subgraph P2["Phase 2 — Structured Service (current)"]
+%% ============================
+%% PHASE 2 — MODULARIZATION
+%% ============================
+
+subgraph P2["Phase 2 — Modular Monolith"]
     
-    subgraph CMD["cmd/api"]
-        M1[["main.go\n- HTTP server\n- Wiring only"]]
+    subgraph H2["internal/httpapi"]
+        H2A["handler.go\nHTTP glue"]
+        H2B["response.go\nJSON helpers"]
     end
 
-    subgraph HTTP["internal/httpapi"]
-        H1[["handler.go\n- Parse request\n- Save temp file\n- Call Analyzer\n- Send JSON response"]]
-        H2[["response.go\n- writeJSON\n- writeError"]]
+    subgraph PA2["internal/pdfanalyzer"]
+        PA2A["analyzer.go\nPDF extraction"]
+        PA2B["wordcount.go"]
     end
 
-    subgraph ANA["internal/pdfanalyzer"]
-        F1[["analyzer.go\nAnalyzeFile(path)\n- pdf.Open\n- GetPlainText\n- io.Copy"]]
-        F2[["analysis.go\nAnalysisResult struct"]]
-        F3[["wordcount.go\ncountWords(text)"]]
-    end
+    CMD2["cmd/api/main.go\n(wiring)"]
 
-    M1 --> H1
-    H1 --> F1
-    F1 --> F2
-    F1 --> F3
+    CMD2 --> H2A --> PA2A
 end
 
-%% ==========================================
-%% PHASE 3 PREVIEW
-%% ==========================================
+%% ============================
+%% PHASE 3 — CLEAN ARCHITECTURE
+%% ============================
 
-subgraph P3["Phase 3 — Clean Architecture (preview / next)"]
-    D1[["Domain Layer\n- Core types\n- Domain errors\n- Rules"]]
-    APL[["Application Layer\n- Use cases\n- Services\n- Interactors"]]
-    ADP[["Adapters Layer\n- HTTP adapter\n- PDF provider interface\n- Storage adapter (future)"]]
+subgraph P3["Phase 3 — Clean Architecture"]
+
+    %% Domain
+    subgraph D3["Domain Layer"]
+        D3A["AnalysisResult"]
+    end
+
+    %% App Layer
+    subgraph A3["Application Layer\n(Use Cases)"]
+        A3A["AnalyzePDFUseCase"]
+    end
+
+    %% Ports
+    subgraph Port3["Ports"]
+        P3A["PDFAnalyzerPort\n(interface)"]
+    end
+
+    %% Adapter Layer (Infra)
+    subgraph AD3["Infrastructure Adapters"]
+        AD3A["PDFAnalyzerAdapter\n(implements port)"]
+        AD3B["internal/pdfanalyzer\n(existing infra)"]
+    end
+
+    %% HTTP Layer (Framework)
+    subgraph HTTP3["HTTP Adapter (Gin)"]
+        H3A["handler.go\n(uses use case)"]
+        H3B["router.go"]
+        H3C["middleware.go"]
+    end
+
+    %% Flow inside Phase 3
+    H3A --> A3A
+    A3A --> P3A
+    P3A --> AD3A
+    AD3A --> AD3B
+    AD3B --> D3A
 end
 
-%% Relations
+%% ============================
+%% TRANSITIONS BETWEEN PHASES
+%% ============================
+
 P1 --> P2 --> P3
 ```
 
-## 🧪 Phase 1 — Naive and coupled (completed)
+# 🧱 Phase 1 — Minimal, Naive, Fully Coupled
 
-What it was:
+- Single `main.go`
+- Handler performed:
+  - file upload
+  - temp file creation
+  - PDF parsing
+  - word counting
+  - JSON response
+- No layers, no structure, no separation.
 
-- Single main.go.
-- One endpoint: POST /analyze.
-- File upload via form.
-- Temporary file written to disk.
-- Direct use of github.com/ledongthuc/pdf.
-- Simple word counting with whitespace detection.
-- No packages, no layers, no tests, no abstractions.
-
-Why it existed:
-
-Phase 1 had one job: prove that PDF extraction works end-to-end in the simplest possible way.
-
-- Validate that the PDF library can:
-  - open real PDF files,
-  - extract text,
-  - handle basic cases.
-- Validate the HTTP flow: upload → parse → respond.
-
-This validation and the decision to accept a simple and coupled architecture are documented in:
-
-- ADR/ADR001.md — Initial simple and coupled architecture to validate PDF extraction.
-
-Once the library and basic flow were validated, Phase 1 was closed. It was never meant to be “good”; it was meant to be honest and minimal.
+The goal was **zero architecture**, only to validate the PDF library (`ledongthuc/pdf`).
 
 ---
 
-## 🧱 Phase 2 — From script to structured service (current)
+# 🧱 Phase 2 — Modularization and Foundations
 
-Phase 2 focuses on introducing minimal structure without jumping directly into full clean architecture.
+Phase 2 introduced structure without over-engineering:
 
-Key changes:
+## ✔ 2.1 — Split into internal packages
+- `internal/pdfanalyzer`
+- `internal/httpapi`
+- `cmd/api`
+- Basic services extracted from handlers.
 
-- Introduced a basic package layout:
-  - cmd/api/main.go — starts the HTTP server and wires dependencies.
-  - internal/httpapi/ — HTTP handlers and JSON response helpers.
-  - internal/pdfanalyzer/ — PDF analysis logic.
+## ✔ 2.2 — First tests
+- Testdata-based integration testing  
+- Unit tests for word counting  
+- ADRs documenting the choices
 
-- Extracted PDF analysis into a dedicated component:
-  - PDFAnalyzer type with:
-    - AnalyzeFile(path string) (AnalysisResult, error)
-  - Uses pdf.Open + GetPlainText + io.Copy + bytes.Buffer.
-  - Encapsulates text extraction and word counting.
+## ✔ 2.3 — HTTP response standardization + middleware
+- JSON envelopes (`success`, `error`, `request_id`)
+- Basic logging, panic recovery, request ID
 
-- Introduced a simple result model:
-  - AnalysisResult with:
-    - Content — raw text extracted.
-    - WordCount — naive word count.
+## ✔ 2.4 — Router replaced with Gin + slog + central config
+- Gin as HTTP framework
+- slog for structured logging
+- internal/config for centralized environment settings
 
-- Separated concerns within internal/pdfanalyzer:
-  - analysis.go — result struct(s).
-  - analyzer.go — main PDF parsing flow.
-  - wordcount.go — helper for word counting.
-
-- Improved HTTP response handling:
-  - writeJSON and writeError helpers in internal/httpapi/response.go.
-  - Consistent JSON for success and error responses.
-
-External behavior (API contract) remains intentionally simple:
-
-- POST /analyze with form field file=@your.pdf returns:
-```json
-    {
-      "file": "your.pdf",
-      "word_count": 1234,
-      "status": "completed"
-    }
-```
-
-
-### ADRs related to Phase 2 refactors:
-
-- ADR/ADR002.md — Introduce basic package structure
-- ADR/ADR003.md — Extract PDF analysis into a dedicated component
-- ADR/ADR004.md — Improve HTTP handler and JSON response structure
-- ADR/ADR005.md — Add unit tests for core logic (planned within Phase 2)
-- ADR/ADR006.md — Introduce AnalysisResult struct
-- ADR/ADR007.md — Extract word counting logic into wordcount.go
-- ADR/ADR008.md — Reorganize analyzer into analysis.go + analyzer.go
-
-Phase 2 is about turning the one-file script into a service with clear internal boundaries, while keeping the external API deliberately small.
+This phase prepared the project to evolve **cleanly**.
 
 ---
 
-## 🧭 Phase 3 — Toward clean architecture (next step)
+# 🧱 Phase 3 — Clean Architecture (Current Phase)
 
-Phase 3 is where the project starts to look like a production-ready Go backend, with clearer separation between:
+Phase 3 introduces the core pillars:
 
-- Domain — what the system does (PDF analysis, rules, decisions).
-- Application — how use cases are orchestrated (services, workflows).
-- Interfaces / Adapters — how HTTP, storage, and PDF libraries plug in.
+## ✔ Domain Layer (Entities)
+`internal/domain/analysis.go`
+- Contains domain concepts  
+- Pure Go types  
+- No infrastructure or framework dependencies  
 
-Target directions for Phase 3:
+## ✔ Application Layer (Use Cases)
+`internal/app/usecase/analyze_pdf.go`
+- Orchestrates the PDF analysis flow  
+- Consumes ports  
+- Returns domain types  
+- Independent of HTTP, files, or libraries  
 
-1) Define a domain layer
+## ✔ Ports (Interfaces)
+`internal/app/port/pdf_analyzer.go`
+- Boundary between application and infrastructure  
+- The application layer depends only on ports  
 
-- Domain types for:
-  - PDF analysis results (extended),
-  - analysis requests (e.g., by path, by uploaded file).
-- Explicit domain errors (e.g., unsupported format, parse failure).
+## ✔ Adapters (Implementations)
+`internal/adapter/pdf/pdf_analyzer_adapter.go`
+- Adapts the existing infrared component (`internal/pdfanalyzer`)  
+- Translates between infra types and domain types  
 
-2) Introduce an application/service layer
+This completes the foundation for true Clean Architecture:
 
-- Use cases like:
-  - AnalyzeUploadedFile(...),
-  - AnalyzeStoredFile(...) (future).
-- Keep HTTP-specific logic out of the domain/app layers.
+HTTP Handler → Use Case → Port → Adapter → Infra Library
 
-3) Abstract external dependencies behind interfaces
-
-- Interface for PDF analysis provider (implemented by PDFAnalyzer).
-- Interface for storage (if/when we persist results).
-- Interface for logging (if needed beyond standard logging).
-
-4) Configuration and environment
-
-- Centralize config loading (port, temp path, limits).
-- Prepare for different environments (development, test, production).
-
-5) Testing focus
-
-- Unit tests for:
-  - domain logic,
-  - application services (with simple fakes or mocks for adapters).
-- Avoid hitting real filesystem or PDF library in most unit tests.
-
-Phase 3 will not be implemented all at once. It will be built incrementally, guided by new requirements and backed by new ADRs.
 
 ---
 
-## 🔭 Future phases (high-level only)
+# 🛣 Next Steps (Phase 3.1)
 
-Later phases (beyond Phase 3) are intentionally left as future work, but the general direction is:
+To fully activate Clean Architecture:
 
-- Asynchronous processing:
-  - in-memory job queue,
-  - worker pool with goroutines.
+1. **Rewrite handler** to use:
+   - AnalyzePDFUseCase
+   - not the PDF analyzer directly
 
-- Operational concerns:
-  - health checks,
-  - basic metrics endpoint,
-  - better error surfaces.
+2. **Update router** to pass the use case instead of the analyzer.
 
-- Optional persistence:
-  - storing analyzed results,
-  - reusing analysis instead of re-parsing.
+3. **Rewrite `main.go` wiring**:
+   - Create core PDFAnalyzer (infra)
+   - Create PDFAnalyzerAdapter
+   - Create AnalyzePDFUseCase
+   - Pass use case into handlers
 
-These will only be introduced when the foundations from Phase 3 are in place.
-
----
-
-## 📂 Current project layout (Phase 2)
-```sh
-    github.com/jorgediasdsg/pdf-expert/
-      cmd/
-        api/
-          main.go                 # HTTP server setup and wiring
-      internal/
-        httpapi/
-          handler.go              # /analyze endpoint
-          response.go             # JSON helpers
-        pdfanalyzer/
-          analysis.go             # AnalysisResult and related structs
-          analyzer.go             # AnalyzeFile implementation
-          wordcount.go            # naive word counting
-      ADR/
-        ADR001.md
-        ADR002.md
-        ADR003.md
-        ADR004.md
-        ADR005.md
-        ADR006.md
-        ADR007.md
-        ADR008.md
-      Makefile
-      DEVELOPMENT.md
-      README.md
-      go.mod
-      go.sum
-```
+After that, the old infra analyzer stops leaking into the HTTP layer.
 
 ---
 
-## 🚀 Running the service
+# 🚀 Future Phases
 
-Assuming Go is installed and go.mod is initialized with:
-
-    module github.com/jorgediasdsg/pdf-expert
-
-Run:
-```sh
-    make run
-    # or
-    go run ./cmd/api
-```
-Send a request:
-```shell
-    curl -X POST -F "file=@sample.pdf" http://localhost:8080/analyze
-```
-Expected sample response:
-```json
-    {
-      "file": "sample.pdf",
-      "word_count": 1234,
-      "status": "completed"
-    }
-```
----
-
-## 🧪 Testing (as Phase 2 and Phase 3 evolve)
-
-Once core tests are added:
-```shell
-    make test
-    # or
-    go test ./...
-```
-The test suite will grow as Phase 2 and Phase 3 introduce more domain and application logic.
+## Phase 4 — Storage, persistence, caching
+## Phase 5 — Observability (metrics, tracing)
+## Phase 6 — Multiple analyzers (OCR, text models, embeddings)
+## Phase 7 — Authentication and multi-tenant support
