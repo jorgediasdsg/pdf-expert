@@ -133,36 +133,28 @@ This phase prepared the project to evolve **cleanly**.
 
 ---
 
-# 🧱 Phase 3 — Clean Architecture (Current Phase)
+## 🧱 Phase 3.2 — DTO Boundary Formalization
 
-Phase 3 introduces the core pillars:
+In this phase, the architecture introduces **formal DTOs** inside the
+`internal/app/dto` package.
 
-## ✔ Domain Layer (Entities)
-`internal/domain/analysis.go`
-- Contains domain concepts  
-- Pure Go types  
-- No infrastructure or framework dependencies  
+DTOs decouple the application layer from:
 
-## ✔ Application Layer (Use Cases)
-`internal/app/usecase/analyze_pdf.go`
-- Orchestrates the PDF analysis flow  
-- Consumes ports  
-- Returns domain types  
-- Independent of HTTP, files, or libraries  
+- HTTP handlers
+- JSON shaping
+- domain internals
+- infrastructure concerns
+- file handling
 
-## ✔ Ports (Interfaces)
-`internal/app/port/pdf_analyzer.go`
-- Boundary between application and infrastructure  
-- The application layer depends only on ports  
+Handlers now transform:
 
-## ✔ Adapters (Implementations)
-`internal/adapter/pdf/pdf_analyzer_adapter.go`
-- Adapts the existing infrared component (`internal/pdfanalyzer`)  
-- Translates between infra types and domain types  
+HTTP → DTO → UseCase → DTO → HTTP
 
-This completes the foundation for true Clean Architecture:
+This eliminates cross-layer leakage and creates a stable boundary that future
+adapters (CLI, gRPC, queue consumers, scheduled jobs) can reuse without
+modifying the application or domain layers.
 
-HTTP Handler → Use Case → Port → Adapter → Infra Library
+
 
 
 ---
