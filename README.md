@@ -198,23 +198,33 @@ This is the first stage of building a fully testable, production-grade architect
 
 ---
 
-# 🛣 Next Steps (Phase 3.1)
+## 🧱 Phase 3.5 — HTTP Handler Tests (Gin Test Framework)
 
-To fully activate Clean Architecture:
+Handlers are now fully testable without running a real server using Gin's
+`httptest` utilities.  
+Tests verify:
 
-1. **Rewrite handler** to use:
-   - AnalyzePDFUseCase
-   - not the PDF analyzer directly
+- status codes  
+- JSON envelope  
+- error mapping  
+- file uploads  
+- use case integration  
+- request/response behavior  
 
-2. **Update router** to pass the use case instead of the analyzer.
+This validates the adapter layer independently from the domain and infra layers.
 
-3. **Rewrite `main.go` wiring**:
-   - Create core PDFAnalyzer (infra)
-   - Create PDFAnalyzerAdapter
-   - Create AnalyzePDFUseCase
-   - Pass use case into handlers
+## 🧱 Phase 3.6 — Prometheus Observability
 
-After that, the old infra analyzer stops leaking into the HTTP layer.
+The API now exposes production-grade monitoring via Prometheus.
+
+Metrics included:
+
+- `http_requests_total`  
+- `http_error_total`  
+- `http_request_duration_seconds`  
+
+Endpoint:
+
 
 ---
 
