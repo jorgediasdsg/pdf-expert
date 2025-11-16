@@ -154,7 +154,24 @@ This eliminates cross-layer leakage and creates a stable boundary that future
 adapters (CLI, gRPC, queue consumers, scheduled jobs) can reuse without
 modifying the application or domain layers.
 
+## 🧱 Phase 3.3 — Validation Layer (DTO + Domain Rules)
 
+The system now introduces **formal validation** at two levels:
+
+### 1. DTO Validation
+Validates external input before it enters the application layer.
+Prevents malformed requests, missing fields, or invalid shapes.
+
+### 2. Domain Validation
+Ensures the domain cannot represent invalid states.
+Domain objects (`AnalysisResult`) now validate their own invariants.
+
+### 3. Use Case Enforcement
+Use cases orchestrate validation, mapping:
+DTO → Domain → DTO → HTTP.
+
+This prevents invalid data from leaking into the domain and keeps the system
+predictable, testable, and resilient.
 
 
 ---

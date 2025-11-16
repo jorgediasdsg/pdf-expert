@@ -8,6 +8,7 @@ import (
 	"github.com/jorgediasdsg/pdf-expert/internal/app/dto"
 	"github.com/jorgediasdsg/pdf-expert/internal/app/usecase"
 	"github.com/jorgediasdsg/pdf-expert/internal/config"
+	"github.com/jorgediasdsg/pdf-expert/internal/domain"
 )
 
 type Handler struct {
@@ -23,23 +24,30 @@ func (h *Handler) AnalyzePDF(c *gin.Context) {
 
 	fileHeader, err := c.FormFile("file")
 	if err != nil {
-		writeError(c, 400, fmt.Sprintf("Failed to read file: %v", err))
+		writeError(c, 400, "file is required")
 		return
 	}
 
 	tmpPath := fmt.Sprintf("%s/%s", cfg.TempFolder, fileHeader.Filename)
 	if err := c.SaveUploadedFile(fileHeader, tmpPath); err != nil {
-		writeError(c, 500, fmt.Sprintf("Failed to save file: %v", err))
+		writeError(c, 500, fmt.Sprintf("failed to save file: %v", err))
 		return
 	}
 
-	input := dto.AnalyzePDFInputDTO{
-		FilePath: tmpPath,
-	}
+	input := dto.AnalyzePDFInputDTO{FilePath: tmpPath}
 
 	output, err := h.usecase.Execute(c.Request.Context(), input)
 	if err != nil {
-		writeError(c, 500, fmt.Sprintf("Failed to analyze PDF: %v", err))
+
+		switch err {
+		case dto.ErrInvalidPath:
+			writeError(c, 400, err.Error())
+		case domain.ErrEmptyContent, domain.ErrInvalidWordCount:
+			writeError(c, 422, err.Error())
+		default:
+			writeError(c, 500, err.Error())
+		}
+
 		_ = os.Remove(tmpPath)
 		return
 	}

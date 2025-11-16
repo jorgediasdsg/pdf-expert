@@ -7,29 +7,37 @@ import (
 	"github.com/jorgediasdsg/pdf-expert/internal/app/port"
 )
 
-// AnalyzePDFUseCase orchestrates PDF analysis using a Port.
 type AnalyzePDFUseCase struct {
 	analyzer port.PDFAnalyzerPort
 }
 
 func NewAnalyzePDFUseCase(analyzer port.PDFAnalyzerPort) *AnalyzePDFUseCase {
-	return &AnalyzePDFUseCase{
-		analyzer: analyzer,
-	}
+	return &AnalyzePDFUseCase{analyzer: analyzer}
 }
 
+// Execute applies validation at the DTO and domain levels.
 func (uc *AnalyzePDFUseCase) Execute(ctx context.Context, input dto.AnalyzePDFInputDTO) (dto.AnalyzePDFOutputDTO, error) {
 
-	// Call domain-capable port
-	result, err := uc.analyzer.AnalyzeFile(input.FilePath)
+	// 1. DTO validation
+	if err := input.Validate(); err != nil {
+		return dto.AnalyzePDFOutputDTO{}, err
+	}
+
+	// 2. Port call → returns domain object
+	domainResult, err := uc.analyzer.AnalyzeFile(input.FilePath)
 	if err != nil {
 		return dto.AnalyzePDFOutputDTO{}, err
 	}
 
-	// Map domain → DTO
+	// 3. Domain validation
+	if err := domainResult.Validate(); err != nil {
+		return dto.AnalyzePDFOutputDTO{}, err
+	}
+
+	// 4. Map domain → DTO
 	out := dto.AnalyzePDFOutputDTO{
-		Content:   result.Content,
-		WordCount: result.WordCount,
+		Content:   domainResult.Content,
+		WordCount: domainResult.WordCount,
 	}
 
 	return out, nil
