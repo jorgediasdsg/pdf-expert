@@ -3,6 +3,11 @@ package main
 import (
 	"fmt"
 
+	_ "github.com/jorgediasdsg/pdf-expert/cmd/api/docs"
+	_ "github.com/swaggo/files"
+	_ "github.com/swaggo/gin-swagger"
+
+	_ "github.com/jorgediasdsg/pdf-expert/cmd/api/docs"
 	"github.com/jorgediasdsg/pdf-expert/internal/adapter/pdf"
 	"github.com/jorgediasdsg/pdf-expert/internal/api"
 	"github.com/jorgediasdsg/pdf-expert/internal/app/usecase"

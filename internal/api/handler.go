@@ -19,6 +19,18 @@ func NewHandler(uc *usecase.AnalyzePDFUseCase) *Handler {
 	return &Handler{usecase: uc}
 }
 
+// AnalyzePDF godoc
+// @Summary Analyze a PDF and count its words
+// @Description Upload a PDF file and receive the word count
+// @Tags analysis
+// @Accept multipart/form-data
+// @Produce json
+// @Param file formData file true "PDF file"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Failure 422 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /analyze [post]
 func (h *Handler) AnalyzePDF(c *gin.Context) {
 	cfg := config.Load()
 

@@ -1,0 +1,44 @@
+info:
+  contact: {}
+paths:
+  /analyze:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload a PDF file and receive the word count
+      parameters:
+      - description: PDF file
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Analyze a PDF and count its words
+      tags:
+      - analysis
+swagger: "2.0"
