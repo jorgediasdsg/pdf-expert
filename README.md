@@ -174,6 +174,28 @@ This prevents invalid data from leaking into the domain and keeps the system
 predictable, testable, and resilient.
 
 
+## 🧱 Phase 3.4 — Unit Testing Use Cases with Mocked Ports
+
+The project now includes **true unit tests** for the application layer.
+
+Using a mock of `PDFAnalyzerPort`, the use case is tested:
+
+- without the filesystem  
+- without the PDF library  
+- without Gin  
+- without adapters  
+
+This proves the Clean Architecture dependency rule:
+application logic depends **only** on ports and domain types.
+
+These tests validate:
+- input validation (DTO),
+- domain invariants,
+- error propagation,
+- correct orchestration.
+
+This is the first stage of building a fully testable, production-grade architecture.
+
 ---
 
 # 🛣 Next Steps (Phase 3.1)
